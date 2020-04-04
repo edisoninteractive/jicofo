@@ -17,6 +17,8 @@
  */
 package org.jitsi.jicofo;
 
+import org.jitsi.provider.MuteIqWithAdminAction;
+import org.jitsi.provider.MuteIqWithAdminActionProvider;
 import org.jitsi.xmpp.extensions.rayo.*;
 import net.java.sip.communicator.service.protocol.*;
 
@@ -57,6 +59,7 @@ public class MeetExtensionsHandler
 
     private MuteIqHandler muteIqHandler;
     private DialIqHandler dialIqHandler;
+    private MuteIqWithAdminActionHandler muteIqWithAdminActionHandler;
 
     /**
      * Creates new instance of {@link MeetExtensionsHandler}.
@@ -69,6 +72,7 @@ public class MeetExtensionsHandler
         this.focusManager = focusManager;
 
         MuteIqProvider.registerMuteIqProvider();
+        MuteIqWithAdminActionProvider.registerMuteIqWithAdminActionProvider();
         new RayoIqProvider().registerRayoIQs();
         StartMutedProvider.registerStartMutedProvider();
     }
@@ -84,8 +88,27 @@ public class MeetExtensionsHandler
 
         muteIqHandler = new MuteIqHandler();
         dialIqHandler = new DialIqHandler();
+        muteIqWithAdminActionHandler = new MuteIqWithAdminActionHandler();
         connection.registerIQRequestHandler(muteIqHandler);
         connection.registerIQRequestHandler(dialIqHandler);
+        connection.registerIQRequestHandler(muteIqWithAdminActionHandler);
+    }
+
+    private class MuteIqWithAdminActionHandler extends AbstractIqRequestHandler {
+
+        MuteIqWithAdminActionHandler()
+        {
+            super(
+                    MuteIq.ELEMENT_NAME,
+                    MuteIq.NAMESPACE,
+                    IQ.Type.set,
+                    Mode.sync);
+        }
+
+        @Override
+        public IQ handleIQRequest(IQ iq) {
+            return handleMuteIq((MuteIqWithAdminAction) iq);
+        }
     }
 
     private class MuteIqHandler extends AbstractIqRequestHandler
@@ -151,6 +174,7 @@ public class MeetExtensionsHandler
 
     private IQ handleMuteIq(MuteIq muteIq)
     {
+
         Boolean doMute = muteIq.getMute();
         Jid jid = muteIq.getJid();
 
@@ -177,14 +201,26 @@ public class MeetExtensionsHandler
 
             if (!muteIq.getFrom().equals(jid))
             {
-                MuteIq muteStatusUpdate = new MuteIq();
-                muteStatusUpdate.setActor(from);
-                muteStatusUpdate.setType(IQ.Type.set);
-                muteStatusUpdate.setTo(jid);
 
-                muteStatusUpdate.setMute(doMute);
+                if (muteIq instanceof MuteIqWithAdminAction) {
+                    MuteIqWithAdminAction muteStatusUpdate = new MuteIqWithAdminAction();
+                    muteStatusUpdate.setActor(from);
+                    muteStatusUpdate.setType(IQ.Type.set);
+                    muteStatusUpdate.setTo(jid);
 
-                connection.sendStanza(muteStatusUpdate);
+                    muteStatusUpdate.setMute(doMute);
+                    muteStatusUpdate.setAllowUnMute(((MuteIqWithAdminAction) muteIq).getAllowUnMute());
+
+                    connection.sendStanza(muteStatusUpdate);
+                } else {
+                    MuteIq muteStatusUpdate = new MuteIq();
+                    muteStatusUpdate.setActor(from);
+                    muteStatusUpdate.setType(IQ.Type.set);
+                    muteStatusUpdate.setTo(jid);
+
+                    muteStatusUpdate.setMute(doMute);
+                }
+
             }
         }
         else
