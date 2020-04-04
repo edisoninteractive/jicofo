@@ -26,6 +26,7 @@ public class MuteIqWithAdminAction extends MuteIq {
         }
 
         xml.attribute("allowUnMute", this.allowUnMute);
+
         xml.rightAngleBracket().append(this.getMute().toString());
 
         return xml;
