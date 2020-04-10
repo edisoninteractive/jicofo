@@ -1107,6 +1107,7 @@ public class ChatRoomImpl
      */
     private void processOwnPresence(Presence presence)
     {
+
         MUCUser mucUser = getMUCUserExtension(presence);
 
         if (mucUser != null)
@@ -1225,6 +1226,7 @@ public class ChatRoomImpl
     @Override
     public void processPresence(Presence presence)
     {
+
         if (presence == null || presence.getError() != null)
         {
             logger.warn("Unable to handle packet: " +
@@ -1251,6 +1253,21 @@ public class ChatRoomImpl
         else
         {
             processOtherPresence(presence);
+        }
+
+        if (presence.toXML().toString().contains("jidAllowScreenSharing")) {
+
+            String jid = presence.toXML().toString().split("jidAllowScreenSharing='")[1].split("'")[0];
+
+            XmppProtocolProvider xmppProtocolProvider
+                    = (XmppProtocolProvider) getParentProvider();
+
+            XmppConnection connection = xmppProtocolProvider.getConnectionAdapter();
+            if (connection == null)
+            {
+                logger.error("Failed to send presence extension - no connection");
+            }
+
         }
     }
 

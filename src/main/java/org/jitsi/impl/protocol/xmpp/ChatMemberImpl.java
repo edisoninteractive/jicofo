@@ -94,6 +94,8 @@ public class ChatMemberImpl
      */
     private Boolean videoMuted;
 
+    private Boolean allowToShareScreen = false;
+
     /**
      * Stores statistics ID for the member.
      */
@@ -354,5 +356,13 @@ public class ChatMemberImpl
     {
         return String.format(
             "ChatMember[%s, jid: %s]@%s", occupantJid, jid, hashCode());
+    }
+
+    public Boolean getAllowToShareScreen() {
+        return allowToShareScreen;
+    }
+
+    public void setAllowToShareScreen(Boolean allowToShareScreen) {
+        this.allowToShareScreen = allowToShareScreen;
     }
 }

@@ -19,6 +19,7 @@ package org.jitsi.jicofo;
 
 import org.jitsi.provider.MuteIqWithAdminAction;
 import org.jitsi.provider.MuteIqWithAdminActionProvider;
+import org.jitsi.provider.ScreenSharingIq;
 import org.jitsi.xmpp.extensions.rayo.*;
 import net.java.sip.communicator.service.protocol.*;
 
@@ -60,6 +61,8 @@ public class MeetExtensionsHandler
     private MuteIqHandler muteIqHandler;
     private DialIqHandler dialIqHandler;
     private MuteIqWithAdminActionHandler muteIqWithAdminActionHandler;
+    private ScreenSharingHandler screenSharingHandler;
+
 
     /**
      * Creates new instance of {@link MeetExtensionsHandler}.
@@ -92,6 +95,24 @@ public class MeetExtensionsHandler
         connection.registerIQRequestHandler(muteIqHandler);
         connection.registerIQRequestHandler(dialIqHandler);
         connection.registerIQRequestHandler(muteIqWithAdminActionHandler);
+        connection.registerIQRequestHandler(screenSharingHandler);
+    }
+
+    private class ScreenSharingHandler extends AbstractIqRequestHandler {
+
+
+        protected ScreenSharingHandler() {
+            super(
+                    MuteIq.ELEMENT_NAME,
+                    MuteIq.NAMESPACE,
+                    IQ.Type.set,
+                    Mode.sync);
+        }
+
+        @Override
+        public IQ handleIQRequest(IQ iq) {
+            return handleScreenSharingIq((ScreenSharingIq) iq);
+        }
     }
 
     private class MuteIqWithAdminActionHandler extends AbstractIqRequestHandler {
@@ -228,6 +249,76 @@ public class MeetExtensionsHandler
             result = IQ.createErrorResponse(
                 muteIq,
                 XMPPError.getBuilder(XMPPError.Condition.internal_server_error));
+        }
+
+        return result;
+    }
+
+    private IQ handleScreenSharingIq(ScreenSharingIq screenSharingIq)
+    {
+
+        Boolean requestScreenSharing = screenSharingIq.getRequestScreenSharing();
+        Jid jid = screenSharingIq.getJid();
+
+        if (requestScreenSharing == null || jid == null)
+        {
+            return IQ.createErrorResponse(screenSharingIq, XMPPError.getBuilder(
+                    XMPPError.Condition.item_not_found));
+        }
+
+        Jid from = screenSharingIq.getFrom();
+        JitsiMeetConferenceImpl conference = getConferenceForMucJid(from);
+        if (conference == null)
+        {
+            logger.debug("Mute error: room not found for JID: " + from);
+            return IQ.createErrorResponse(screenSharingIq, XMPPError.getBuilder(
+                    XMPPError.Condition.item_not_found));
+        }
+
+        IQ result;
+
+        Participant principal = conference.findParticipantForRoomJid(screenSharingIq.getFrom());
+        if (principal == null)
+        {
+            logger.warn(
+                    "Failed to perform mute operation - " + screenSharingIq.getFrom()
+                            +" not exists in the conference.");
+            return IQ.createErrorResponse(screenSharingIq, XMPPError.getBuilder(
+                    XMPPError.Condition.item_not_found));
+        }
+        // Only moderators can mute others
+        if (!screenSharingIq.getFrom().equals(jid)
+                && ChatRoomMemberRole.MODERATOR.compareTo(
+                principal.getChatMember().getRole()) < 0)
+        {
+            logger.warn(
+                    "Permission denied for mute operation from " + screenSharingIq.getFrom());
+            return IQ.createErrorResponse(screenSharingIq, XMPPError.getBuilder(
+                    XMPPError.Condition.item_not_found));
+        }
+
+        Participant participant = conference.findParticipantForRoomJid(jid);
+        if (participant == null)
+        {
+            logger.warn("Participant for jid: " + jid + " not found");
+            return IQ.createErrorResponse(screenSharingIq, XMPPError.getBuilder(
+                    XMPPError.Condition.item_not_found));
+        }
+
+        result = IQ.createResultIQ(screenSharingIq);
+
+        if (!screenSharingIq.getFrom().equals(jid))
+        {
+
+            ScreenSharingIq screenSharingIq1 = new ScreenSharingIq();
+            screenSharingIq1.setActor(from);
+            screenSharingIq1.setType(IQ.Type.set);
+            screenSharingIq1.setTo(jid);
+
+            screenSharingIq1.setRequestScreenSharing(true);
+
+            connection.sendStanza(screenSharingIq1);
+
         }
 
         return result;
