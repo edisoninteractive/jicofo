@@ -1255,20 +1255,6 @@ public class ChatRoomImpl
             processOtherPresence(presence);
         }
 
-        if (presence.toXML().toString().contains("jidAllowScreenSharing")) {
-
-            String jid = presence.toXML().toString().split("jidAllowScreenSharing='")[1].split("'")[0];
-
-            XmppProtocolProvider xmppProtocolProvider
-                    = (XmppProtocolProvider) getParentProvider();
-
-            XmppConnection connection = xmppProtocolProvider.getConnectionAdapter();
-            if (connection == null)
-            {
-                logger.error("Failed to send presence extension - no connection");
-            }
-
-        }
     }
 
     class MemberListener
