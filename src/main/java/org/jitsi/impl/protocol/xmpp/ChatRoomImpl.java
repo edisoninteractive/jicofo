@@ -1107,6 +1107,7 @@ public class ChatRoomImpl
      */
     private void processOwnPresence(Presence presence)
     {
+
         MUCUser mucUser = getMUCUserExtension(presence);
 
         if (mucUser != null)
@@ -1225,6 +1226,7 @@ public class ChatRoomImpl
     @Override
     public void processPresence(Presence presence)
     {
+
         if (presence == null || presence.getError() != null)
         {
             logger.warn("Unable to handle packet: " +
@@ -1252,6 +1254,7 @@ public class ChatRoomImpl
         {
             processOtherPresence(presence);
         }
+
     }
 
     class MemberListener
